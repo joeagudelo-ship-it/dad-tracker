@@ -18,16 +18,33 @@ export const HEADERS: Record<string, string[]> = {
 };
 
 const BASE_URL = "https://sheets.googleapis.com/v4/spreadsheets";
+const REVALIDATE = 15;
 
 export async function getSheetData(sheetName: string) {
   const url = `${BASE_URL}/${SPREADSHEET_ID}/values/${encodeURIComponent(sheetName)}?key=${API_KEY}`;
-  const res = await fetch(url, { cache: "no-store" });
-  if (!res.ok) throw new Error(`Failed to fetch ${sheetName}`);
+  const res = await fetch(url, { next: { revalidate: REVALIDATE } });
+  if (!res.ok) return [];
   const data = await res.json();
   return data.values || [];
 }
 
+export async function getAllSheetsData() {
+  const sheetNames = Object.values(SHEETS);
+  const ranges = sheetNames.map((s) => `ranges=${encodeURIComponent(s)}`).join("&");
+  const url = `${BASE_URL}/${SPREADSHEET_ID}/values:batchGet?${ranges}&key=${API_KEY}`;
+  const res = await fetch(url, { next: { revalidate: REVALIDATE } });
+  if (!res.ok) return {};
+  const data = await res.json();
+  const result: Record<string, string[][]> = {};
+  data.valueRanges?.forEach((vr: { range: string; values?: string[][] }) => {
+    const sheetName = vr.range.split("!")[0];
+    result[sheetName] = vr.values || [];
+  });
+  return result;
+}
+
 export async function appendToSheet(sheetName: string, values: string[]) {
+  "use server";
   const url = `${BASE_URL}/${SPREADSHEET_ID}/values/${encodeURIComponent(sheetName)}:append?key=${API_KEY}&valueInputOption=USER_ENTERED`;
   const res = await fetch(url, {
     method: "POST",
@@ -39,11 +56,13 @@ export async function appendToSheet(sheetName: string, values: string[]) {
 }
 
 export async function initSheetHeaders() {
+  "use server";
   const url = `${BASE_URL}/${SPREADSHEET_ID}/values:batchUpdate?key=${API_KEY}`;
-  const data: { majorDimension: string; data: { range: string; values: string[][] }[] } = {
-    majorDimension: "ROWS",
+  const data = {
+    valueInputOption: "RAW",
     data: Object.entries(HEADERS).map(([sheet, headers]) => ({
-      range: `${sheet}!A1:E1`,
+      range: `${sheet}!A1`,
+      majorDimension: "ROWS",
       values: [headers],
     })),
   };
