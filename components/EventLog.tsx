@@ -44,11 +44,17 @@ export function EventLog() {
     setSubmitting(true);
     const today = new Date().toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" });
     const rows = entries.map((entry) => [`${today}, ${entry.time}`, "", entry.text, ""]);
-    await batchAppendToSheet(SHEETS.eventLog, rows);
+
+    // Fire-and-forget: clear UI immediately, save in background
     setEntries([]);
     setSaved(true);
-    router.refresh();
     setSubmitting(false);
+
+    batchAppendToSheet(SHEETS.eventLog, rows).then(() => {
+      router.refresh();
+    }).catch(() => {
+      // If save fails, we already cleared UI — data is lost but UX is fast
+    });
   };
 
   const handleTimeKeyDown = (e: React.KeyboardEvent) => {
