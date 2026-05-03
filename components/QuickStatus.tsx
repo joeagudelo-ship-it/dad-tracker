@@ -16,9 +16,9 @@ const quickStatuses = [
 ];
 
 const waterAmounts = [
+  { label: "90ml", value: 90 },
   { label: "150ml", value: 150 },
-  { label: "250ml", value: 250 },
-  { label: "500ml", value: 500 },
+  { label: "210ml", value: 210 },
 ];
 
 function getNowDateTime() {
