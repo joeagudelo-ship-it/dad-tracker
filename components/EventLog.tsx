@@ -53,25 +53,30 @@ export function EventLog() {
       meta: {},
     }));
 
+    console.log(`[EventLog] Submitting ${dbEvents.length} events to Supabase`);
+
     // Instant write to Supabase
     setEntries([]);
     setSaved(true);
 
     try {
       const inserted = await insertEvents(dbEvents);
+      console.log(`[EventLog] Supabase insert OK, ${Array.isArray(inserted) ? inserted.length : 1} rows, syncing to Sheets...`);
       // Background sync each event to Sheets (fire-and-forget)
       if (Array.isArray(inserted)) {
         inserted.forEach((ev) => {
-          syncEventToSheets(ev.id).catch(() => {});
+          syncEventToSheets(ev.id).catch((err) => console.error(`[EventLog] syncEventToSheets error:`, err));
         });
       }
       router.refresh();
-    } catch {
+    } catch (err) {
+      console.log(`[EventLog] Supabase failed, falling back to Sheets: ${err}`);
       // If Supabase fails, fall back to direct Sheets write
       const { batchAppendToSheet } = await import("@/lib/actions");
       const { SHEETS } = await import("@/lib/sheets");
       const todayFmt = new Date().toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" });
       const rows = entries.map((entry) => [`${todayFmt}, ${entry.time}`, "", entry.text, ""]);
+      console.log(`[EventLog] Fallback: writing ${rows.length} rows to Sheets`);
       await batchAppendToSheet(SHEETS.eventLog, rows);
       setEntries([]);
       router.refresh();

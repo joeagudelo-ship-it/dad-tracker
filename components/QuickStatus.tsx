@@ -41,6 +41,7 @@ export function QuickStatus() {
     setNote("");
 
     const { date, time } = getNowDateTime();
+    console.log(`[QuickStatus] Saving status: ${status}, note: ${currentNote}`);
 
     try {
       const inserted = await insertEvent({
@@ -52,9 +53,11 @@ export function QuickStatus() {
         details: currentNote,
         meta: {},
       });
-      syncEventToSheets(inserted.id).catch(() => {});
-    } catch {
-      appendToSheet(SHEETS.quickStatus, [formatTimestamp(), "", status, currentNote]).catch(() => {});
+      console.log(`[QuickStatus] Supabase insert OK, id: ${inserted.id}, syncing to Sheets...`);
+      syncEventToSheets(inserted.id).catch((err) => console.error(`[QuickStatus] syncEventToSheets error:`, err));
+    } catch (err) {
+      console.log(`[QuickStatus] Supabase failed, falling back to Sheets: ${err}`);
+      appendToSheet(SHEETS.quickStatus, [formatTimestamp(), "", status, currentNote]).catch((e) => console.error(`[QuickStatus] Sheets fallback error:`, e));
     }
 
     setTimeout(() => { setSaving(null); setSelected(null); }, 2000);
@@ -64,6 +67,7 @@ export function QuickStatus() {
     setSaving(`water-${ml}`);
 
     const { date, time } = getNowDateTime();
+    console.log(`[QuickStatus] Saving water: ${ml}ml`);
 
     try {
       const inserted = await insertEvent({
@@ -75,9 +79,11 @@ export function QuickStatus() {
         details: `${ml}ml`,
         meta: { water_ml: String(ml) },
       });
-      syncEventToSheets(inserted.id).catch(() => {});
-    } catch {
-      appendToSheet(SHEETS.quickStatus, [formatTimestamp(), "", `Water: ${ml}ml`, "Water Intake"]).catch(() => {});
+      console.log(`[QuickStatus] Supabase insert OK, id: ${inserted.id}, syncing to Sheets...`);
+      syncEventToSheets(inserted.id).catch((err) => console.error(`[QuickStatus] syncEventToSheets error:`, err));
+    } catch (err) {
+      console.log(`[QuickStatus] Supabase failed, falling back to Sheets: ${err}`);
+      appendToSheet(SHEETS.quickStatus, [formatTimestamp(), "", `Water: ${ml}ml`, "Water Intake"]).catch((e) => console.error(`[QuickStatus] Sheets fallback error:`, e));
     }
 
     setTimeout(() => { setSaving(null); }, 2000);

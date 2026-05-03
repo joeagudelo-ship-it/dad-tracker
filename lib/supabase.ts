@@ -27,43 +27,63 @@ export function isSupabaseConfigured() {
 
 export async function insertEvent(event: Omit<DBEvent, "id" | "created_at">) {
   if (!supabase) throw new Error("Supabase not configured");
+  console.log(`[supabase.insertEvent] Inserting: type=${event.type}, title=${event.title}, date=${event.date}`);
   const { data, error } = await supabase
     .from("events")
     .insert([event])
     .select()
     .single();
-  if (error) throw error;
+  if (error) {
+    console.error(`[supabase.insertEvent] Error: ${error.message}`);
+    throw error;
+  }
+  console.log(`[supabase.insertEvent] Success, id=${data.id}`);
   return data;
 }
 
 export async function insertEvents(events: Omit<DBEvent, "id" | "created_at">[]) {
   if (!supabase) throw new Error("Supabase not configured");
+  console.log(`[supabase.insertEvents] Inserting ${events.length} events`);
   const { data, error } = await supabase
     .from("events")
     .insert(events)
     .select();
-  if (error) throw error;
+  if (error) {
+    console.error(`[supabase.insertEvents] Error: ${error.message}`);
+    throw error;
+  }
+  console.log(`[supabase.insertEvents] Success, ${Array.isArray(data) ? data.length : 0} rows`);
   return data;
+}
+
+export async function getAllEvents() {
+  if (!supabase) throw new Error("Supabase not configured");
+  console.log(`[supabase.getAllEvents] Fetching all events`);
+  const { data, error } = await supabase
+    .from("events")
+    .select("*")
+    .order("created_at", { ascending: false });
+  if (error) {
+    console.error(`[supabase.getAllEvents] Error: ${error.message}`);
+    throw error;
+  }
+  console.log(`[supabase.getAllEvents] Got ${data?.length || 0} events`);
+  return data || [];
 }
 
 export async function getEventsByDate(date: string) {
   if (!supabase) throw new Error("Supabase not configured");
+  console.log(`[supabase.getEventsByDate] Fetching events for date: ${date}`);
   const { data, error } = await supabase
     .from("events")
     .select("*")
     .eq("date", date)
     .order("time", { ascending: false });
-  if (error) throw error;
-  return data || [];
-}
-
-export async function getAllEvents() {
-  if (!supabase) throw new Error("Supabase not configured");
-  const { data, error } = await supabase
-    .from("events")
-    .select("*")
-    .order("created_at", { ascending: false });
-  if (error) throw error;
+  if (error) {
+    console.error(`[supabase.getEventsByDate] Error: ${error.message}`);
+    throw error;
+  }
+  console.log(`[supabase.getEventsByDate] Got ${data?.length || 0} events`);
   return data || [];
 }
 

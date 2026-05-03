@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getAllSheetsData, buildTimeline, TimelineEvent, formatDateOnly } from "@/lib/sheets";
-import { getAllEvents, DBEvent } from "@/lib/supabase";
+import { getAllEvents, DBEvent, isSupabaseConfigured } from "@/lib/supabase";
 import { Card } from "@/components/ui";
 import { TimelineIcon } from "@/components/TimelineIcon";
 
@@ -27,15 +27,26 @@ function dbEventToTimeline(e: DBEvent): TimelineEvent {
 }
 
 async function fetchAllEvents(): Promise<TimelineEvent[]> {
-  try {
-    const supabaseEvents = await getAllEvents();
-    if (supabaseEvents.length > 0) {
-      return supabaseEvents.map(dbEventToTimeline);
-    }
-  } catch {}
+  const configured = isSupabaseConfigured();
+  console.log(`[Timeline.fetchAllEvents] Supabase configured: ${configured}`);
 
+  if (configured) {
+    try {
+      const supabaseEvents = await getAllEvents();
+      console.log(`[Timeline.fetchAllEvents] Supabase returned ${supabaseEvents.length} events`);
+      if (supabaseEvents.length > 0) {
+        return supabaseEvents.map(dbEventToTimeline);
+      }
+    } catch (err) {
+      console.log(`[Timeline.fetchAllEvents] Supabase error: ${err}`);
+    }
+  }
+
+  console.log(`[Timeline.fetchAllEvents] Falling back to Sheets`);
   const allData = await getAllSheetsData();
-  return buildTimeline(allData);
+  const events = buildTimeline(allData);
+  console.log(`[Timeline.fetchAllEvents] Sheets returned ${events.length} events`);
+  return events;
 }
 
 function TimelineItem({ event }: { event: TimelineEvent }) {
@@ -64,7 +75,25 @@ function TimelineItem({ event }: { event: TimelineEvent }) {
 
 export default async function TimelinePage() {
   const events = await fetchAllEvents();
+  // Debug: log source of events for troubleshooting timeline updates
+  try {
+    const src = (typeof isSupabaseConfigured === 'function' && isSupabaseConfigured()) ? 'supabase' : 'sheets';
+    console.log(`[Timeline] loaded ${events.length} events from ${src}`);
+  } catch {
+    // ignore logging failures in production
+  }
   const grouped = groupByDate(events);
+  // Additional explicit logs for debugging
+  try {
+    const typeCounts = new Map<string, number>();
+    for (const e of events) {
+      typeCounts.set(e.type, (typeCounts.get(e.type) ?? 0) + 1);
+    }
+    const dist = Array.from(typeCounts.entries()).map(([k,v]) => `${k}:${v}`).join(', ');
+    console.log(`[Timeline] distribution: ${dist} | days=${grouped.size} | sample=${events.slice(0,3).map(e => e.type).join(', ')}`);
+  } catch {
+    // ignore
+  }
 
   return (
     <div className="space-y-5">
