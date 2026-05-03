@@ -15,6 +15,17 @@ export async function appendToSheet(sheetName: string, values: string[]) {
   return res.json();
 }
 
+export async function batchAppendToSheet(sheetName: string, rows: string[][]) {
+  const url = `${BASE_URL}/${SPREADSHEET_ID}/values/${encodeURIComponent(sheetName)}:append?key=${API_KEY}&valueInputOption=USER_ENTERED`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ values: rows }),
+  });
+  if (!res.ok) throw new Error(`Failed to batch append to ${sheetName}`);
+  return res.json();
+}
+
 export async function initSheetHeaders() {
   const url = `${BASE_URL}/${SPREADSHEET_ID}/values:batchUpdate?key=${API_KEY}`;
   const data = {

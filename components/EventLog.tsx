@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { SHEETS } from "@/lib/sheets";
-import { appendToSheet } from "@/lib/actions";
+import { batchAppendToSheet } from "@/lib/actions";
 import { Card, Button } from "@/components/ui";
 
 export function EventLog() {
@@ -43,9 +43,8 @@ export function EventLog() {
     if (entries.length === 0) return;
     setSubmitting(true);
     const today = new Date().toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" });
-    for (const entry of entries) {
-      await appendToSheet(SHEETS.eventLog, [`${today}, ${entry.time}`, "", entry.text, ""]);
-    }
+    const rows = entries.map((entry) => [`${today}, ${entry.time}`, "", entry.text, ""]);
+    await batchAppendToSheet(SHEETS.eventLog, rows);
     setEntries([]);
     setSaved(true);
     router.refresh();
