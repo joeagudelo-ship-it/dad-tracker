@@ -1,6 +1,6 @@
 "use server";
 
-import { API_KEY, SPREADSHEET_ID, HEADERS, SHEETS } from "./sheets";
+import { API_KEY, SPREADSHEET_ID, HEADERS } from "./sheets";
 
 const BASE_URL = "https://sheets.googleapis.com/v4/spreadsheets";
 
@@ -31,10 +31,4 @@ export async function initSheetHeaders() {
     body: JSON.stringify(data),
   });
   return res.ok;
-}
-
-export async function revalidateSheet(sheetName: string) {
-  const { revalidatePath } = await import("next/cache");
-  revalidatePath(`/`);
-  revalidatePath(`/${sheetName.replace(/([A-Z])/g, "-$1").toLowerCase()}`);
 }
