@@ -25,18 +25,6 @@ export const HEADERS: Record<string, string[]> = {
   [SHEETS.eventLog]: ["Date/Time", "Author", "Event", "Notes"],
 };
 
-export const SECTION_COLORS: Record<string, { bg: string; text: string; light: string; badge: "info" | "success" | "default" | "danger" | "warning" | "primary" }> = {
-  care: { bg: "bg-[#cffafe]", text: "text-[#0891b2]", light: "bg-[#0891b2]/5", badge: "info" },
-  doctor: { bg: "bg-[#d1fae5]", text: "text-[#059669]", light: "bg-[#059669]/5", badge: "success" },
-  note: { bg: "bg-[#ede9fe]", text: "text-[#7c3aed]", light: "bg-[#7c3aed]/5", badge: "default" },
-  vital: { bg: "bg-[#ffe4e6]", text: "text-[#e11d48]", light: "bg-[#e11d48]/5", badge: "danger" },
-  visitor: { bg: "bg-[#fef3c7]", text: "text-[#d97706]", light: "bg-[#d97706]/5", badge: "warning" },
-  shift: { bg: "bg-[#dbeafe]", text: "text-[#2563eb]", light: "bg-[#2563eb]/5", badge: "primary" },
-  status: { bg: "bg-[#d1fae5]", text: "text-[#059669]", light: "bg-[#059669]/5", badge: "success" },
-  meal: { bg: "bg-[#ffedd5]", text: "text-[#ea580c]", light: "bg-[#ea580c]/5", badge: "warning" },
-  event: { bg: "bg-[#f1f5f9]", text: "text-[#475569]", light: "bg-[#475569]/5", badge: "default" },
-};
-
 const BASE_URL = "https://sheets.googleapis.com/v4/spreadsheets";
 const REVALIDATE = 15;
 

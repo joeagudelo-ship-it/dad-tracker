@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
-import { getAllSheetsData, getDaysInMonth, TimelineEvent, buildTimeline } from "@/lib/sheets";
+import { getDaysInMonth, buildTimeline } from "@/lib/sheets";
 import { Card } from "@/components/ui";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -10,6 +10,10 @@ const MONTHS = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December",
 ];
+
+function toDateKey(year: number, month: number, day: number): string {
+  return `${String(month + 1).padStart(2, "0")}/${String(day).padStart(2, "0")}/${year}`;
+}
 
 export default function CalendarPage({
   allData,
@@ -20,10 +24,12 @@ export default function CalendarPage({
   const [currentMonth, setCurrentMonth] = useState(now.getMonth());
   const [currentYear, setCurrentYear] = useState(now.getFullYear());
 
-  const events = buildTimeline(allData);
-  const eventDates = new Set(events.map((e) => e.date));
+  const eventDates = useMemo(() => {
+    const events = buildTimeline(allData);
+    return new Set(events.map((e) => e.date));
+  }, [allData]);
 
-  const days = getDaysInMonth(currentYear, currentMonth);
+  const days = useMemo(() => getDaysInMonth(currentYear, currentMonth), [currentYear, currentMonth]);
   const firstDayOfWeek = days[0]?.getDay() || 0;
   const prevMonthDays = getDaysInMonth(currentYear, currentMonth - 1).length;
 
@@ -48,10 +54,6 @@ export default function CalendarPage({
       setCurrentMonth(currentMonth + 1);
     }
   };
-
-  function toDateKey(year: number, month: number, day: number): string {
-    return `${String(month + 1).padStart(2, "0")}/${String(day).padStart(2, "0")}/${year}`;
-  }
 
   const cells: (number | null)[] = [];
   for (let i = 0; i < firstDayOfWeek; i++) {
@@ -107,42 +109,37 @@ export default function CalendarPage({
             const isPrevMonth = day !== null && i < firstDayOfWeek;
             const isNextMonth = day !== null && i >= firstDayOfWeek + days.length;
             const isToday = isCurrentMonth && day === todayDate;
-            const dateKey = day !== null ? toDateKey(
-              isPrevMonth ? (currentMonth === 0 ? currentYear - 1 : currentYear) : (isNextMonth ? (currentMonth === 11 ? currentYear + 1 : currentYear) : currentYear),
-              isPrevMonth ? (currentMonth === 0 ? 11 : currentMonth - 1) : (isNextMonth ? (currentMonth === 11 ? 0 : currentMonth + 1) : currentMonth),
-              day || 1
-            ) : null;
-            const hasEvent = dateKey ? eventDates.has(dateKey) : false;
+
+            const cellMonth = isPrevMonth
+              ? (currentMonth === 0 ? 11 : currentMonth - 1)
+              : isNextMonth
+                ? (currentMonth === 11 ? 0 : currentMonth + 1)
+                : currentMonth;
+            const cellYear = isPrevMonth && currentMonth === 0
+              ? currentYear - 1
+              : isNextMonth && currentMonth === 11
+                ? currentYear + 1
+                : currentYear;
+
+            const dk = day !== null ? toDateKey(cellYear, cellMonth, day) : null;
+            const hasEvent = dk ? eventDates.has(dk) : false;
 
             if (day === null) {
               return <div key={i} className="aspect-square" />;
             }
 
-            const actualDate = isPrevMonth
-              ? (currentMonth === 0 ? 11 : currentMonth - 1)
-              : isNextMonth
-                ? (currentMonth === 11 ? 0 : currentMonth + 1)
-                : currentMonth;
-            const actualYear = isPrevMonth && currentMonth === 0
-              ? currentYear - 1
-              : isNextMonth && currentMonth === 11
-                ? currentYear + 1
-                : currentYear;
-            const dk = toDateKey(actualYear, actualDate, day);
-            const hasEvt = eventDates.has(dk);
-
             return (
               <Link
                 key={i}
-                href={`/day/${encodeURIComponent(dk)}`}
+                href={`/day/${encodeURIComponent(dk!)}`}
                 className={`aspect-square flex flex-col items-center justify-center rounded-xl text-sm font-semibold transition-all relative
                   ${isPrevMonth || isNextMonth ? "text-[#cbd5e1] dark:text-[#475569]" : "text-[#1e293b] dark:text-[#f8fafc]"}
                   ${isToday ? "bg-[#0891b2] text-white font-bold" : "hover:bg-[#f1f5f9] dark:hover:bg-[#334155]"}
-                  ${hasEvt && !isToday ? "bg-[#cffafe] dark:bg-[#083344]" : ""}
+                  ${hasEvent && !isToday ? "bg-[#cffafe] dark:bg-[#083344]" : ""}
                 `}
               >
                 {day}
-                {hasEvt && !isToday && (
+                {hasEvent && !isToday && (
                   <div className="flex gap-0.5 mt-0.5">
                     <div className="w-1 h-1 rounded-full bg-[#0891b2] dark:bg-[#22d3ee]" />
                   </div>

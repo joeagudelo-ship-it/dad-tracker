@@ -2,14 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { insertEvent } from "@/lib/supabase";
+import { syncEventToSheets, appendToSheet } from "@/lib/actions";
 import { SHEETS, formatTimestamp } from "@/lib/sheets";
-import { appendToSheet } from "@/lib/actions";
 import { Card, Button, Input, TextArea, Select } from "@/components/ui";
 
 export function CareForm() {
   const router = useRouter();
   const [showForm, setShowForm] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
   const [item, setItem] = useState("");
   const [status, setStatus] = useState("Needed");
   const [priority, setPriority] = useState("Medium");
@@ -18,12 +18,30 @@ export function CareForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!item.trim()) return;
-    setSubmitting(true);
-    await appendToSheet(SHEETS.careNeeds, [formatTimestamp(), item, status, priority, notes]);
-    setItem(""); setNotes(""); setStatus("Needed"); setPriority("Medium");
+
+    const now = new Date();
+    const today = now.toISOString().split("T")[0];
+    const time = now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
+
     setShowForm(false);
+    setItem(""); setNotes(""); setStatus("Needed"); setPriority("Medium");
+
+    try {
+      const inserted = await insertEvent({
+        date: today,
+        time,
+        type: "care",
+        title: item,
+        subtitle: `${status} · ${priority} priority`,
+        details: notes,
+        meta: { status, priority },
+      });
+      syncEventToSheets(inserted.id).catch(() => {});
+    } catch {
+      appendToSheet(SHEETS.careNeeds, [formatTimestamp(), item, status, priority, notes]).catch(() => {});
+    }
+
     router.refresh();
-    setSubmitting(false);
   };
 
   return (
@@ -36,30 +54,10 @@ export function CareForm() {
         <Card className="p-5 mt-4">
           <form onSubmit={handleSubmit} className="space-y-4">
             <Input label="What is needed?" value={item} onChange={setItem} placeholder="e.g., Pain medication, Extra blankets" required />
-            <Select
-              label="Status"
-              value={status}
-              onChange={setStatus}
-              options={[
-                { value: "Needed", label: "Still Needed" },
-                { value: "In Progress", label: "In Progress" },
-                { value: "Done", label: "Completed" },
-              ]}
-            />
-            <Select
-              label="Priority"
-              value={priority}
-              onChange={setPriority}
-              options={[
-                { value: "High", label: "High - Urgent" },
-                { value: "Medium", label: "Medium" },
-                { value: "Low", label: "Low" },
-              ]}
-            />
+            <Select label="Status" value={status} onChange={setStatus} options={[{ value: "Needed", label: "Still Needed" }, { value: "In Progress", label: "In Progress" }, { value: "Done", label: "Completed" }]} />
+            <Select label="Priority" value={priority} onChange={setPriority} options={[{ value: "High", label: "High - Urgent" }, { value: "Medium", label: "Medium" }, { value: "Low", label: "Low" }]} />
             <TextArea label="Notes (optional)" value={notes} onChange={setNotes} placeholder="Any additional details..." />
-            <Button type="submit" variant="cta" disabled={submitting}>
-              {submitting ? "Saving..." : "Save Entry"}
-            </Button>
+            <Button type="submit" variant="cta">Save Entry</Button>
           </form>
         </Card>
       )}

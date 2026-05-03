@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { SHEETS, formatTimestamp } from "@/lib/sheets";
-import { appendToSheet } from "@/lib/actions";
+import { insertEvent } from "@/lib/supabase";
+import { syncEventToSheets, appendToSheet } from "@/lib/actions";
 import { Card } from "@/components/ui";
 
 const quickStatuses = [
@@ -14,6 +15,20 @@ const quickStatuses = [
   { label: "Sleeping", emoji: "💤", color: "bg-[#ede9fe] dark:bg-[#2e1065] text-[#7c3aed] hover:bg-[#ddd6fe]" },
 ];
 
+const waterAmounts = [
+  { label: "150ml", value: 150 },
+  { label: "250ml", value: 250 },
+  { label: "500ml", value: 500 },
+];
+
+function getNowDateTime() {
+  const now = new Date();
+  return {
+    date: now.toISOString().split("T")[0],
+    time: now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true }),
+  };
+}
+
 export function QuickStatus() {
   const [selected, setSelected] = useState<string | null>(null);
   const [note, setNote] = useState("");
@@ -22,9 +37,50 @@ export function QuickStatus() {
   const handleStatus = async (status: string) => {
     setSelected(status);
     setSaving(status);
+    const currentNote = note;
     setNote("");
-    appendToSheet(SHEETS.quickStatus, [formatTimestamp(), "", status, note]).catch(() => {});
+
+    const { date, time } = getNowDateTime();
+
+    try {
+      const inserted = await insertEvent({
+        date,
+        time,
+        type: "status",
+        title: status,
+        subtitle: currentNote || "",
+        details: currentNote,
+        meta: {},
+      });
+      syncEventToSheets(inserted.id).catch(() => {});
+    } catch {
+      appendToSheet(SHEETS.quickStatus, [formatTimestamp(), "", status, currentNote]).catch(() => {});
+    }
+
     setTimeout(() => { setSaving(null); setSelected(null); }, 2000);
+  };
+
+  const handleWater = async (ml: number) => {
+    setSaving(`water-${ml}`);
+
+    const { date, time } = getNowDateTime();
+
+    try {
+      const inserted = await insertEvent({
+        date,
+        time,
+        type: "status",
+        title: `Water: ${ml}ml`,
+        subtitle: "Water Intake",
+        details: `${ml}ml`,
+        meta: { water_ml: String(ml) },
+      });
+      syncEventToSheets(inserted.id).catch(() => {});
+    } catch {
+      appendToSheet(SHEETS.quickStatus, [formatTimestamp(), "", `Water: ${ml}ml`, "Water Intake"]).catch(() => {});
+    }
+
+    setTimeout(() => { setSaving(null); }, 2000);
   };
 
   return (
@@ -50,6 +106,28 @@ export function QuickStatus() {
             </button>
           );
         })}
+      </div>
+
+      <div className="mb-3">
+        <p className="text-xs font-bold text-[#64748b] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Water Intake</p>
+        <div className="grid grid-cols-3 gap-2">
+          {waterAmounts.map((w) => {
+            const isSaving = saving === `water-${w.value}`;
+            return (
+              <button
+                key={w.label}
+                onClick={() => handleWater(w.value)}
+                disabled={isSaving}
+                className={`min-h-[48px] flex items-center justify-center gap-2 rounded-xl font-semibold text-sm transition-all bg-[#e0f2fe] dark:bg-[#0c4a6e] text-[#0284c7] hover:bg-[#bae6fd] ${
+                  isSaving ? "ring-2 ring-offset-2 ring-[#0891b2] dark:ring-offset-[#0c0a09] scale-105 opacity-70" : ""
+                }`}
+              >
+                <span className="text-lg">💧</span>
+                <span>{isSaving ? "Saved ✓" : w.label}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <div className="flex gap-2">

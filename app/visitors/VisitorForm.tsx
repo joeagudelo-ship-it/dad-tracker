@@ -2,27 +2,44 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { insertEvent } from "@/lib/supabase";
+import { syncEventToSheets, appendToSheet } from "@/lib/actions";
 import { SHEETS, formatTimestamp } from "@/lib/sheets";
-import { appendToSheet } from "@/lib/actions";
 import { Card, Button, Input, TextArea } from "@/components/ui";
 
 export function VisitorForm() {
   const router = useRouter();
   const [showForm, setShowForm] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
   const [name, setName] = useState("");
   const [notes, setNotes] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
-    setSubmitting(true);
-    const timestamp = formatTimestamp();
-    await appendToSheet(SHEETS.visitorLog, [name, timestamp, "", notes]);
-    setName(""); setNotes("");
+
+    const now = new Date();
+    const today = now.toISOString().split("T")[0];
+    const time = now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
+
     setShowForm(false);
+    setName(""); setNotes("");
+
+    try {
+      const inserted = await insertEvent({
+        date: today,
+        time,
+        type: "visitor",
+        title: name,
+        subtitle: `Checked in at ${time}`,
+        details: notes,
+        meta: {},
+      });
+      syncEventToSheets(inserted.id).catch(() => {});
+    } catch {
+      appendToSheet(SHEETS.visitorLog, [name, formatTimestamp(), "", notes]).catch(() => {});
+    }
+
     router.refresh();
-    setSubmitting(false);
   };
 
   return (
@@ -36,9 +53,7 @@ export function VisitorForm() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <Input label="Visitor Name" value={name} onChange={setName} placeholder="e.g., Aunt Maria" required />
             <TextArea label="Notes (optional)" value={notes} onChange={setNotes} placeholder="Brought flowers, Stayed for lunch..." />
-            <Button type="submit" variant="cta" disabled={submitting}>
-              {submitting ? "Saving..." : "Check In Visitor"}
-            </Button>
+            <Button type="submit" variant="cta">Check In Visitor</Button>
           </form>
         </Card>
       )}

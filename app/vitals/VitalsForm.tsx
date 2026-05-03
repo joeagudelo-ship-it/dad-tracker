@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { insertEvent } from "@/lib/supabase";
+import { syncEventToSheets, appendToSheet } from "@/lib/actions";
 import { SHEETS, formatTimestamp } from "@/lib/sheets";
-import { appendToSheet } from "@/lib/actions";
 import { Card, Button, Input, Select, TextArea } from "@/components/ui";
 
 const vitalTypes = [
@@ -20,7 +21,6 @@ const vitalTypes = [
 export function VitalsForm() {
   const router = useRouter();
   const [showForm, setShowForm] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
   const [type, setType] = useState("Temperature");
   const [value, setValue] = useState("");
   const [notes, setNotes] = useState("");
@@ -31,12 +31,30 @@ export function VitalsForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!value.trim()) return;
-    setSubmitting(true);
-    await appendToSheet(SHEETS.vitals, [formatTimestamp(), type, value, unit, notes]);
-    setValue(""); setNotes(""); setType("Temperature");
+
+    const now = new Date();
+    const today = now.toISOString().split("T")[0];
+    const time = now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
+
     setShowForm(false);
+    setValue(""); setNotes(""); setType("Temperature");
+
+    try {
+      const inserted = await insertEvent({
+        date: today,
+        time,
+        type: "vital",
+        title: `${type}: ${value} ${unit}`,
+        subtitle: "Vital Reading",
+        details: notes,
+        meta: { value, unit, type },
+      });
+      syncEventToSheets(inserted.id).catch(() => {});
+    } catch {
+      appendToSheet(SHEETS.vitals, [formatTimestamp(), type, value, unit, notes]).catch(() => {});
+    }
+
     router.refresh();
-    setSubmitting(false);
   };
 
   return (
@@ -48,18 +66,10 @@ export function VitalsForm() {
       {showForm && (
         <Card className="p-5 mt-4">
           <form onSubmit={handleSubmit} className="space-y-4">
-            <Select
-              label="Vital Type"
-              value={type}
-              onChange={setType}
-              options={vitalTypes.map((t) => ({ value: t.value, label: t.label }))}
-              required
-            />
-            <Input label={`Value${unit ? ` (${unit})` : ""}`} value={value} onChange={setValue} placeholder={`Enter ${type.toLowerCase()}...`} required type="text" />
+            <Select label="Vital Type" value={type} onChange={setType} options={vitalTypes.map((t) => ({ value: t.value, label: t.label }))} required />
+            <Input label={`Value${unit ? ` (${unit})` : ""}`} value={value} onChange={setValue} placeholder={`Enter ${type.toLowerCase()}...`} required />
             <TextArea label="Notes (optional)" value={notes} onChange={setNotes} placeholder="e.g., Taken after medication, Before meals..." />
-            <Button type="submit" variant="cta" disabled={submitting}>
-              {submitting ? "Saving..." : "Save Reading"}
-            </Button>
+            <Button type="submit" variant="cta">Save Reading</Button>
           </form>
         </Card>
       )}

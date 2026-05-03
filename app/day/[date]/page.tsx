@@ -1,8 +1,21 @@
 import Link from "next/link";
-import { getAllSheetsData, buildTimeline, TimelineEvent, formatTimestamp } from "@/lib/sheets";
+import { getAllSheetsData, buildTimeline, TimelineEvent } from "@/lib/sheets";
+import { getEventsByDate, isSupabaseConfigured, DBEvent } from "@/lib/supabase";
 import { Card } from "@/components/ui";
 import { TimelineIcon } from "@/components/TimelineIcon";
 import { notFound } from "next/navigation";
+
+function dbEventToTimeline(e: DBEvent): TimelineEvent {
+  return {
+    date: e.date,
+    time: e.time,
+    type: e.type,
+    title: e.title,
+    subtitle: e.subtitle,
+    details: e.details,
+    meta: e.meta || {},
+  };
+}
 
 export default async function DayPage({
   params,
@@ -10,9 +23,21 @@ export default async function DayPage({
   params: Promise<{ date: string }>;
 }) {
   const { date } = await params;
-  const allData = await getAllSheetsData();
-  const events = buildTimeline(allData);
-  const dayEvents = events.filter((e) => e.date === date);
+
+  let dayEvents: TimelineEvent[] = [];
+
+  if (isSupabaseConfigured()) {
+    try {
+      const events = await getEventsByDate(date);
+      dayEvents = events.map(dbEventToTimeline);
+    } catch {
+      const allData = await getAllSheetsData();
+      dayEvents = buildTimeline(allData).filter((e) => e.date === date);
+    }
+  } else {
+    const allData = await getAllSheetsData();
+    dayEvents = buildTimeline(allData).filter((e) => e.date === date);
+  }
 
   if (dayEvents.length === 0 && !date) {
     notFound();

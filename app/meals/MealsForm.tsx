@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { insertEvent } from "@/lib/supabase";
+import { syncEventToSheets, appendToSheet } from "@/lib/actions";
 import { SHEETS, formatTimestamp } from "@/lib/sheets";
-import { appendToSheet } from "@/lib/actions";
 import { Card, Button, Select, TextArea } from "@/components/ui";
 
 export function MealsForm() {
@@ -17,7 +18,26 @@ export function MealsForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
-    await appendToSheet(SHEETS.meals, [formatTimestamp(), meal, appetite, notes]);
+
+    const now = new Date();
+    const today = now.toISOString().split("T")[0];
+    const time = now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
+
+    try {
+      const inserted = await insertEvent({
+        date: today,
+        time,
+        type: "meal",
+        title: meal,
+        subtitle: `Appetite: ${appetite}`,
+        details: notes,
+        meta: { meal, appetite },
+      });
+      syncEventToSheets(inserted.id).catch(() => {});
+    } catch {
+      appendToSheet(SHEETS.meals, [formatTimestamp(), meal, appetite, notes]).catch(() => {});
+    }
+
     setMeal("Breakfast"); setAppetite("Good"); setNotes("");
     setShowForm(false);
     router.refresh();

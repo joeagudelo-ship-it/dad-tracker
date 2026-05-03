@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getAllSheetsData, buildTimeline, TimelineEvent, formatDateOnly } from "@/lib/sheets";
+import { getAllEvents, DBEvent } from "@/lib/supabase";
 import { Card } from "@/components/ui";
 import { TimelineIcon } from "@/components/TimelineIcon";
 
@@ -11,6 +12,30 @@ function groupByDate(events: TimelineEvent[]): Map<string, TimelineEvent[]> {
     groups.get(key)!.push(event);
   });
   return groups;
+}
+
+function dbEventToTimeline(e: DBEvent): TimelineEvent {
+  return {
+    date: e.date,
+    time: e.time,
+    type: e.type,
+    title: e.title,
+    subtitle: e.subtitle,
+    details: e.details,
+    meta: e.meta || {},
+  };
+}
+
+async function fetchAllEvents(): Promise<TimelineEvent[]> {
+  try {
+    const supabaseEvents = await getAllEvents();
+    if (supabaseEvents.length > 0) {
+      return supabaseEvents.map(dbEventToTimeline);
+    }
+  } catch {}
+
+  const allData = await getAllSheetsData();
+  return buildTimeline(allData);
 }
 
 function TimelineItem({ event }: { event: TimelineEvent }) {
@@ -38,8 +63,7 @@ function TimelineItem({ event }: { event: TimelineEvent }) {
 }
 
 export default async function TimelinePage() {
-  const allData = await getAllSheetsData();
-  const events = buildTimeline(allData);
+  const events = await fetchAllEvents();
   const grouped = groupByDate(events);
 
   return (

@@ -2,8 +2,8 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { SHEETS } from "@/lib/sheets";
-import { batchAppendToSheet } from "@/lib/actions";
+import { insertEvents } from "@/lib/supabase";
+import { syncEventToSheets } from "@/lib/actions";
 import { Card, Button } from "@/components/ui";
 
 export function EventLog() {
@@ -11,7 +11,6 @@ export function EventLog() {
   const [entries, setEntries] = useState<{ time: string; text: string }[]>([]);
   const [time, setTime] = useState("");
   const [text, setText] = useState("");
-  const [submitting, setSubmitting] = useState(false);
   const [saved, setSaved] = useState(false);
   const textRef = useRef<HTMLInputElement>(null);
   const timeRef = useRef<HTMLInputElement>(null);
@@ -23,7 +22,8 @@ export function EventLog() {
 
   useEffect(() => {
     if (saved) {
-      setTimeout(() => setSaved(false), 1500);
+      const timer = setTimeout(() => setSaved(false), 2000);
+      return () => clearTimeout(timer);
     }
   }, [saved]);
 
@@ -41,20 +41,41 @@ export function EventLog() {
 
   const submitAll = async () => {
     if (entries.length === 0) return;
-    setSubmitting(true);
-    const today = new Date().toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" });
-    const rows = entries.map((entry) => [`${today}, ${entry.time}`, "", entry.text, ""]);
 
-    // Fire-and-forget: clear UI immediately, save in background
+    const today = new Date().toISOString().split("T")[0];
+    const dbEvents = entries.map((entry) => ({
+      date: today,
+      time: entry.time,
+      type: "event" as const,
+      title: entry.text,
+      subtitle: "Logged",
+      details: "",
+      meta: {},
+    }));
+
+    // Instant write to Supabase
     setEntries([]);
     setSaved(true);
-    setSubmitting(false);
 
-    batchAppendToSheet(SHEETS.eventLog, rows).then(() => {
+    try {
+      const inserted = await insertEvents(dbEvents);
+      // Background sync each event to Sheets (fire-and-forget)
+      if (Array.isArray(inserted)) {
+        inserted.forEach((ev) => {
+          syncEventToSheets(ev.id).catch(() => {});
+        });
+      }
       router.refresh();
-    }).catch(() => {
-      // If save fails, we already cleared UI — data is lost but UX is fast
-    });
+    } catch {
+      // If Supabase fails, fall back to direct Sheets write
+      const { batchAppendToSheet } = await import("@/lib/actions");
+      const { SHEETS } = await import("@/lib/sheets");
+      const todayFmt = new Date().toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" });
+      const rows = entries.map((entry) => [`${todayFmt}, ${entry.time}`, "", entry.text, ""]);
+      await batchAppendToSheet(SHEETS.eventLog, rows);
+      setEntries([]);
+      router.refresh();
+    }
   };
 
   const handleTimeKeyDown = (e: React.KeyboardEvent) => {
@@ -137,10 +158,9 @@ export function EventLog() {
         <Button
           onClick={submitAll}
           variant="cta"
-          disabled={submitting}
           className="mt-2"
         >
-          {saved ? "Saved!" : submitting ? "Saving..." : `Save ${entries.length} Event${entries.length > 1 ? "s" : ""}`}
+          {saved ? "Saved ✓" : `Save ${entries.length} Event${entries.length > 1 ? "s" : ""}`}
         </Button>
       )}
     </Card>
