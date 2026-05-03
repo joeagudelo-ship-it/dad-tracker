@@ -1,37 +1,10 @@
-"use client";
+import { getSheetData, SHEETS, formatDate } from "@/lib/sheets";
+import { Card, EmptyState, Button } from "@/components/ui";
+import { NotesForm } from "./NotesForm";
 
-import { useEffect, useState } from "react";
-import { getSheetData, appendToSheet, SHEETS, formatTimestamp, formatDate } from "@/lib/sheets";
-import { Card, LoadingState, EmptyState, Button, Input, TextArea } from "@/components/ui";
-
-export default function NotesPage() {
-  const [loading, setLoading] = useState(true);
-  const [entries, setEntries] = useState<string[][]>([]);
-  const [showForm, setShowForm] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [author, setAuthor] = useState("");
-  const [note, setNote] = useState("");
-
-  const fetchData = async () => {
-    const data = await getSheetData(SHEETS.generalNotes);
-    setEntries(data.length > 1 ? data.slice(1).reverse() : []);
-    setLoading(false);
-  };
-
-  useEffect(() => { fetchData(); }, []);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!note.trim()) return;
-    setSubmitting(true);
-    await appendToSheet(SHEETS.generalNotes, [formatTimestamp(), author || "Anonymous", note]);
-    setAuthor(""); setNote("");
-    setShowForm(false);
-    await fetchData();
-    setSubmitting(false);
-  };
-
-  if (loading) return <LoadingState />;
+export default async function NotesPage() {
+  const data = await getSheetData(SHEETS.generalNotes);
+  const entries = data.length > 1 ? data.slice(1).reverse() : [];
 
   const emptyIcon = (
     <svg className="w-10 h-10 text-[#7c3aed]" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -46,33 +19,19 @@ export default function NotesPage() {
           <h2 className="text-2xl font-extrabold text-[#164e63] dark:text-[#f8fafc]">General Notes</h2>
           <p className="text-[#64748b] dark:text-[#94a3b8] text-sm font-medium">Observations and thoughts</p>
         </div>
-        <Button onClick={() => setShowForm(!showForm)} variant={showForm ? "secondary" : "primary"} className="w-auto px-5">
-          {showForm ? "Cancel" : "+ Add"}
-        </Button>
       </div>
 
-      {showForm && (
-        <Card className="p-5">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <Input label="Your Name (optional)" value={author} onChange={setAuthor} placeholder="e.g., Maria, John..." />
-            <TextArea label="Note" value={note} onChange={setNote} placeholder="Write your observation or note..." required rows={4} />
-            <Button type="submit" variant="cta" disabled={submitting}>
-              {submitting ? "Saving..." : "Save Note"}
-            </Button>
-          </form>
-        </Card>
-      )}
+      <NotesForm />
 
       {entries.length === 0 ? (
         <EmptyState
           title="No notes yet"
           description="Share observations and thoughts about your dad"
           icon={emptyIcon}
-          action={<Button onClick={() => setShowForm(true)}>+ Add First Note</Button>}
         />
       ) : (
         <div className="space-y-3">
-          {entries.map((row, i) => (
+          {entries.map((row: string[], i: number) => (
             <Card key={i} className="p-4">
               <div className="flex items-start gap-3">
                 <div className="w-10 h-10 bg-[#ede9fe] dark:bg-[#2e1065] rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">

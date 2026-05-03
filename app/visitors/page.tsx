@@ -1,44 +1,16 @@
-"use client";
+import { getSheetData, SHEETS, formatDate } from "@/lib/sheets";
+import { Card, EmptyState } from "@/components/ui";
+import { VisitorForm } from "./VisitorForm";
 
-import { useEffect, useState } from "react";
-import { getSheetData, appendToSheet, SHEETS, formatTimestamp, formatDate } from "@/lib/sheets";
-import { Card, LoadingState, EmptyState, Button, Input, TextArea } from "@/components/ui";
+const emptyIcon = (
+  <svg className="w-10 h-10 text-[#d97706]" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+  </svg>
+);
 
-export default function VisitorsPage() {
-  const [loading, setLoading] = useState(true);
-  const [entries, setEntries] = useState<string[][]>([]);
-  const [showForm, setShowForm] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [name, setName] = useState("");
-  const [notes, setNotes] = useState("");
-
-  const fetchData = async () => {
-    const data = await getSheetData(SHEETS.visitorLog);
-    setEntries(data.length > 1 ? data.slice(1).reverse() : []);
-    setLoading(false);
-  };
-
-  useEffect(() => { fetchData(); }, []);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim()) return;
-    setSubmitting(true);
-    const timestamp = formatTimestamp();
-    await appendToSheet(SHEETS.visitorLog, [name, timestamp, "", notes]);
-    setName(""); setNotes("");
-    setShowForm(false);
-    await fetchData();
-    setSubmitting(false);
-  };
-
-  if (loading) return <LoadingState />;
-
-  const emptyIcon = (
-    <svg className="w-10 h-10 text-[#d97706]" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
-    </svg>
-  );
+export default async function VisitorsPage() {
+  const data = await getSheetData(SHEETS.visitorLog);
+  const entries = data.length > 1 ? data.slice(1).reverse() : [];
 
   return (
     <div className="space-y-5">
@@ -47,33 +19,19 @@ export default function VisitorsPage() {
           <h2 className="text-2xl font-extrabold text-[#164e63] dark:text-[#f8fafc]">Visitors</h2>
           <p className="text-[#64748b] dark:text-[#94a3b8] text-sm font-medium">Who stopped by today</p>
         </div>
-        <Button onClick={() => setShowForm(!showForm)} variant={showForm ? "secondary" : "primary"} className="w-auto px-5">
-          {showForm ? "Cancel" : "+ Add"}
-        </Button>
       </div>
 
-      {showForm && (
-        <Card className="p-5">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <Input label="Visitor Name" value={name} onChange={setName} placeholder="e.g., Aunt Maria" required />
-            <TextArea label="Notes (optional)" value={notes} onChange={setNotes} placeholder="Brought flowers, Stayed for lunch..." />
-            <Button type="submit" variant="cta" disabled={submitting}>
-              {submitting ? "Saving..." : "Check In Visitor"}
-            </Button>
-          </form>
-        </Card>
-      )}
+      <VisitorForm />
 
       {entries.length === 0 ? (
         <EmptyState
           title="No visitors yet"
           description="Log who comes to visit your dad"
           icon={emptyIcon}
-          action={<Button onClick={() => setShowForm(true)}>+ Log First Visitor</Button>}
         />
       ) : (
         <div className="space-y-3">
-          {entries.map((row, i) => (
+          {entries.map((row: string[], i: number) => (
             <Card key={i} className="p-4">
               <div className="flex items-start gap-3">
                 <div className="w-10 h-10 bg-[#fef3c7] dark:bg-[#422006] rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">

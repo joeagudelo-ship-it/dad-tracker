@@ -1,38 +1,10 @@
-"use client";
+import { getSheetData, SHEETS, formatDate } from "@/lib/sheets";
+import { Card, EmptyState, Button } from "@/components/ui";
+import { DoctorForm } from "./DoctorForm";
 
-import { useEffect, useState } from "react";
-import { getSheetData, appendToSheet, SHEETS, formatTimestamp, formatDate } from "@/lib/sheets";
-import { Card, LoadingState, EmptyState, Button, Input, TextArea } from "@/components/ui";
-
-export default function DoctorPage() {
-  const [loading, setLoading] = useState(true);
-  const [entries, setEntries] = useState<string[][]>([]);
-  const [showForm, setShowForm] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [doctor, setDoctor] = useState("");
-  const [summary, setSummary] = useState("");
-  const [actions, setActions] = useState("");
-
-  const fetchData = async () => {
-    const data = await getSheetData(SHEETS.doctorUpdates);
-    setEntries(data.length > 1 ? data.slice(1).reverse() : []);
-    setLoading(false);
-  };
-
-  useEffect(() => { fetchData(); }, []);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!doctor.trim() || !summary.trim()) return;
-    setSubmitting(true);
-    await appendToSheet(SHEETS.doctorUpdates, [formatTimestamp(), doctor, summary, actions]);
-    setDoctor(""); setSummary(""); setActions("");
-    setShowForm(false);
-    await fetchData();
-    setSubmitting(false);
-  };
-
-  if (loading) return <LoadingState />;
+export default async function DoctorPage() {
+  const data = await getSheetData(SHEETS.doctorUpdates);
+  const entries = data.length > 1 ? data.slice(1).reverse() : [];
 
   const emptyIcon = (
     <svg className="w-10 h-10 text-[#059669]" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -47,34 +19,19 @@ export default function DoctorPage() {
           <h2 className="text-2xl font-extrabold text-[#164e63] dark:text-[#f8fafc]">Doctor Updates</h2>
           <p className="text-[#64748b] dark:text-[#94a3b8] text-sm font-medium">What the medical team said</p>
         </div>
-        <Button onClick={() => setShowForm(!showForm)} variant={showForm ? "secondary" : "primary"} className="w-auto px-5">
-          {showForm ? "Cancel" : "+ Add"}
-        </Button>
       </div>
 
-      {showForm && (
-        <Card className="p-5">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <Input label="Doctor Name" value={doctor} onChange={setDoctor} placeholder="e.g., Dr. Smith" required />
-            <TextArea label="What did they say?" value={summary} onChange={setSummary} placeholder="Summary of the update..." required rows={4} />
-            <TextArea label="Action Items (optional)" value={actions} onChange={setActions} placeholder="Follow-up tasks, next steps..." />
-            <Button type="submit" variant="cta" disabled={submitting}>
-              {submitting ? "Saving..." : "Save Update"}
-            </Button>
-          </form>
-        </Card>
-      )}
+      <DoctorForm />
 
       {entries.length === 0 ? (
         <EmptyState
           title="No doctor updates yet"
           description="Record what the doctors have said"
           icon={emptyIcon}
-          action={<Button onClick={() => setShowForm(true)}>+ Add First Update</Button>}
         />
       ) : (
         <div className="space-y-3">
-          {entries.map((row, i) => (
+          {entries.map((row: string[], i: number) => (
             <Card key={i} className="p-4">
               <div className="flex items-start gap-3">
                 <div className="w-10 h-10 bg-[#d1fae5] dark:bg-[#064e3b] rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">

@@ -1,39 +1,11 @@
-"use client";
+import { getSheetData, SHEETS, formatTimestamp, formatDate } from "@/lib/sheets";
+import { appendToSheet } from "@/lib/actions";
+import { Card, Badge, EmptyState, Button, Input, TextArea, Select } from "@/components/ui";
+import { CareForm } from "./CareForm";
 
-import { useEffect, useState } from "react";
-import { getSheetData, appendToSheet, SHEETS, formatTimestamp, formatDate } from "@/lib/sheets";
-import { Card, Badge, LoadingState, EmptyState, Button, Input, TextArea, Select } from "@/components/ui";
-
-export default function CarePage() {
-  const [loading, setLoading] = useState(true);
-  const [entries, setEntries] = useState<string[][]>([]);
-  const [showForm, setShowForm] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [item, setItem] = useState("");
-  const [status, setStatus] = useState("Needed");
-  const [priority, setPriority] = useState("Medium");
-  const [notes, setNotes] = useState("");
-
-  const fetchData = async () => {
-    const data = await getSheetData(SHEETS.careNeeds);
-    setEntries(data.length > 1 ? data.slice(1).reverse() : []);
-    setLoading(false);
-  };
-
-  useEffect(() => { fetchData(); }, []);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!item.trim()) return;
-    setSubmitting(true);
-    await appendToSheet(SHEETS.careNeeds, [formatTimestamp(), item, status, priority, notes]);
-    setItem(""); setNotes(""); setStatus("Needed"); setPriority("Medium");
-    setShowForm(false);
-    await fetchData();
-    setSubmitting(false);
-  };
-
-  if (loading) return <LoadingState />;
+export default async function CarePage() {
+  const data = await getSheetData(SHEETS.careNeeds);
+  const entries = data.length > 1 ? data.slice(1).reverse() : [];
 
   const emptyIcon = (
     <svg className="w-10 h-10 text-[#0891b2]" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -48,53 +20,19 @@ export default function CarePage() {
           <h2 className="text-2xl font-extrabold text-[#164e63] dark:text-[#f8fafc]">Care Needs</h2>
           <p className="text-[#64748b] dark:text-[#94a3b8] text-sm font-medium">Supplies, medications, tasks</p>
         </div>
-        <Button onClick={() => setShowForm(!showForm)} variant={showForm ? "secondary" : "primary"} className="w-auto px-5">
-          {showForm ? "Cancel" : "+ Add"}
-        </Button>
       </div>
 
-      {showForm && (
-        <Card className="p-5">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <Input label="What is needed?" value={item} onChange={setItem} placeholder="e.g., Pain medication, Extra blankets" required />
-            <Select
-              label="Status"
-              value={status}
-              onChange={setStatus}
-              options={[
-                { value: "Needed", label: "Still Needed" },
-                { value: "In Progress", label: "In Progress" },
-                { value: "Done", label: "Completed" },
-              ]}
-            />
-            <Select
-              label="Priority"
-              value={priority}
-              onChange={setPriority}
-              options={[
-                { value: "High", label: "High - Urgent" },
-                { value: "Medium", label: "Medium" },
-                { value: "Low", label: "Low" },
-              ]}
-            />
-            <TextArea label="Notes (optional)" value={notes} onChange={setNotes} placeholder="Any additional details..." />
-            <Button type="submit" variant="cta" disabled={submitting}>
-              {submitting ? "Saving..." : "Save Entry"}
-            </Button>
-          </form>
-        </Card>
-      )}
+      <CareForm />
 
       {entries.length === 0 ? (
         <EmptyState
           title="No care needs yet"
           description="Tap + Add to track what your dad needs"
           icon={emptyIcon}
-          action={<Button onClick={() => setShowForm(true)}>+ Add First Item</Button>}
         />
       ) : (
         <div className="space-y-3">
-          {entries.map((row, i) => (
+          {entries.map((row: string[], i: number) => (
             <Card key={i} className="p-4">
               <div className="flex items-start gap-3">
                 <div className="flex-1 min-w-0">

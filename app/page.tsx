@@ -1,16 +1,13 @@
-"use client";
-
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import { getSheetData, initSheetHeaders, formatDate } from "@/lib/sheets";
-import { Card, Badge, LoadingState } from "@/components/ui";
+import { getAllSheetsData, formatDate } from "@/lib/sheets";
+import { Card, Badge } from "@/components/ui";
 
 const sections = [
-  { name: "Care Needs", path: "/care", color: "cyan", short: "Care" },
-  { name: "Doctor Updates", path: "/doctor", color: "emerald", short: "Doctors" },
-  { name: "General Notes", path: "/notes", color: "violet", short: "Notes" },
-  { name: "Vitals", path: "/vitals", color: "rose", short: "Vitals" },
-  { name: "Visitors", path: "/visitors", color: "amber", short: "Visitors" },
+  { name: "Care Needs", path: "/care", color: "cyan" },
+  { name: "Doctor Updates", path: "/doctor", color: "emerald" },
+  { name: "General Notes", path: "/notes", color: "violet" },
+  { name: "Vitals", path: "/vitals", color: "rose" },
+  { name: "Visitors", path: "/visitors", color: "amber" },
 ];
 
 const colorMap: Record<string, { bg: string; text: string; badge: "info" | "success" | "default" | "danger" | "warning" }> = {
@@ -29,33 +26,18 @@ const iconPaths: Record<string, string> = {
   visitors: "M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z",
 };
 
-export default function Home() {
-  const [loading, setLoading] = useState(true);
-  const [latestEntries, setLatestEntries] = useState<Record<string, string[]>>({});
-  const [counts, setCounts] = useState<Record<string, number>>({});
+export default async function Home() {
+  const allData = await getAllSheetsData();
 
-  useEffect(() => {
-    initSheetHeaders();
-    Promise.all(
-      sections.map(async (s) => {
-        const data = await getSheetData(s.name.replace(/\s/g, ""));
-        return { name: s.name, data };
-      })
-    ).then((results) => {
-      const entries: Record<string, string[]> = {};
-      const c: Record<string, number> = {};
-      results.forEach((r) => {
-        const rows = r.data.length > 1 ? r.data.slice(1) : [];
-        entries[r.name] = rows[rows.length - 1] || [];
-        c[r.name] = rows.length;
-      });
-      setLatestEntries(entries);
-      setCounts(c);
-      setLoading(false);
-    });
-  }, []);
+  const counts: Record<string, number> = {};
+  const latestEntries: Record<string, string[]> = {};
 
-  if (loading) return <LoadingState />;
+  sections.forEach((s) => {
+    const data = allData[s.name] || [];
+    const rows = data.length > 1 ? data.slice(1) : [];
+    counts[s.name] = rows.length;
+    latestEntries[s.name] = rows[rows.length - 1] || [];
+  });
 
   return (
     <div className="space-y-6">
@@ -71,7 +53,7 @@ export default function Home() {
       <div className="grid grid-cols-2 gap-3">
         {sections.map((s) => {
           const colors = colorMap[s.color];
-          const iconKey = s.short.toLowerCase();
+          const iconKey = s.path.slice(1);
           return (
             <Link key={s.path} href={s.path} className="block">
               <Card interactive className="p-4">
@@ -100,7 +82,7 @@ export default function Home() {
                 <div className="flex items-start gap-3">
                   <div className={`${colors.bg} w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5`}>
                     <svg className={`w-5 h-5 ${colors.text}`} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" d={iconPaths[s.short.toLowerCase()]} />
+                      <path strokeLinecap="round" strokeLinejoin="round" d={iconPaths[s.path.slice(1)]} />
                     </svg>
                   </div>
                   <div className="flex-1 min-w-0">

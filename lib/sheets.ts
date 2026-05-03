@@ -43,37 +43,6 @@ export async function getAllSheetsData() {
   return result;
 }
 
-export async function appendToSheet(sheetName: string, values: string[]) {
-  "use server";
-  const url = `${BASE_URL}/${SPREADSHEET_ID}/values/${encodeURIComponent(sheetName)}:append?key=${API_KEY}&valueInputOption=USER_ENTERED`;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ values: [values] }),
-  });
-  if (!res.ok) throw new Error(`Failed to append to ${sheetName}`);
-  return res.json();
-}
-
-export async function initSheetHeaders() {
-  "use server";
-  const url = `${BASE_URL}/${SPREADSHEET_ID}/values:batchUpdate?key=${API_KEY}`;
-  const data = {
-    valueInputOption: "RAW",
-    data: Object.entries(HEADERS).map(([sheet, headers]) => ({
-      range: `${sheet}!A1`,
-      majorDimension: "ROWS",
-      values: [headers],
-    })),
-  };
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  });
-  return res.ok;
-}
-
 export function formatTimestamp(): string {
   return new Date().toLocaleString("en-US", {
     month: "2-digit",
