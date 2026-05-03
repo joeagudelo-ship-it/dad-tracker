@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { getAllSheetsData, buildTimeline, TimelineEvent, formatDate, SECTION_COLORS } from "@/lib/sheets";
-import { Card, Badge } from "@/components/ui";
+import { getAllSheetsData, buildTimeline, TimelineEvent, formatDate, SECTION_COLORS, getTodayKey } from "@/lib/sheets";
+import { Card, Badge, Button } from "@/components/ui";
 import { QuickStatus } from "@/components/QuickStatus";
+import { EventLog } from "@/components/EventLog";
 import { TimelineIcon } from "@/components/TimelineIcon";
 
 const sections = [
@@ -58,12 +59,18 @@ export default async function HomePage() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
             </svg>
           </div>
-          <div>
+          <div className="flex-1 min-w-0">
             <h2 className="text-xl font-extrabold leading-tight">Dad Tracker</h2>
             <p className="text-white/70 text-sm font-medium">
               {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
             </p>
           </div>
+          <Link href={`/day/${encodeURIComponent(getTodayKey())}`} className="flex-shrink-0">
+            <div className="bg-white/20 hover:bg-white/30 rounded-2xl px-4 py-3 text-center transition-colors cursor-pointer">
+              <p className="text-xl font-extrabold">{new Date().getDate()}</p>
+              <p className="text-[10px] text-white/70 font-semibold uppercase">Today</p>
+            </div>
+          </Link>
         </div>
         <div className="grid grid-cols-3 gap-3">
           <div className="bg-white/10 rounded-2xl p-3 text-center">
@@ -83,6 +90,9 @@ export default async function HomePage() {
 
       {/* Quick Status */}
       <QuickStatus />
+
+      {/* Event Log */}
+      <EventLog />
 
       {/* Sections Grid */}
       <div>
@@ -133,6 +143,7 @@ export default async function HomePage() {
                             event.type === "visitor" ? iconPaths.visitor :
                             event.type === "shift" ? iconPaths.shift :
                             event.type === "status" ? "M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" :
+                            event.type === "event" ? iconPaths.note :
                             iconPaths.meal
                           } />
                         </svg>

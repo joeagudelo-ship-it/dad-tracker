@@ -10,6 +10,7 @@ export const SHEETS = {
   shiftSchedule: "ShiftSchedule",
   quickStatus: "QuickStatus",
   meals: "Meals",
+  eventLog: "EventLog",
 } as const;
 
 export const HEADERS: Record<string, string[]> = {
@@ -18,9 +19,10 @@ export const HEADERS: Record<string, string[]> = {
   [SHEETS.generalNotes]: ["Date/Time", "Author", "Note"],
   [SHEETS.vitals]: ["Date/Time", "Type", "Value", "Unit", "Notes"],
   [SHEETS.visitorLog]: ["Name", "Check-In", "Check-Out", "Notes"],
-  [SHEETS.shiftSchedule]: ["Date", "Person", "Shift", "Notes"],
+  [SHEETS.shiftSchedule]: ["Date", "Person", "Shift Start", "Shift End", "Notes"],
   [SHEETS.quickStatus]: ["Date/Time", "Author", "Status", "Notes"],
   [SHEETS.meals]: ["Date/Time", "Meal", "Appetite", "Notes"],
+  [SHEETS.eventLog]: ["Date/Time", "Author", "Event", "Notes"],
 };
 
 export const SECTION_COLORS: Record<string, { bg: string; text: string; light: string; badge: "info" | "success" | "default" | "danger" | "warning" | "primary" }> = {
@@ -32,6 +34,7 @@ export const SECTION_COLORS: Record<string, { bg: string; text: string; light: s
   shift: { bg: "bg-[#dbeafe]", text: "text-[#2563eb]", light: "bg-[#2563eb]/5", badge: "primary" },
   status: { bg: "bg-[#d1fae5]", text: "text-[#059669]", light: "bg-[#059669]/5", badge: "success" },
   meal: { bg: "bg-[#ffedd5]", text: "text-[#ea580c]", light: "bg-[#ea580c]/5", badge: "warning" },
+  event: { bg: "bg-[#f1f5f9]", text: "text-[#475569]", light: "bg-[#475569]/5", badge: "default" },
 };
 
 const BASE_URL = "https://sheets.googleapis.com/v4/spreadsheets";
@@ -63,7 +66,7 @@ export async function getAllSheetsData() {
 export interface TimelineEvent {
   date: string;
   time: string;
-  type: "care" | "doctor" | "note" | "vital" | "visitor" | "shift" | "status" | "meal";
+  type: "care" | "doctor" | "note" | "vital" | "visitor" | "shift" | "status" | "meal" | "event";
   title: string;
   subtitle: string;
   details?: string;
@@ -175,6 +178,19 @@ export function buildTimeline(allData: Record<string, string[][]>): TimelineEven
       type: "meal",
       title: row[1] || "Meal",
       subtitle: `Appetite: ${row[2] || "N/A"}`,
+      details: row[3],
+    });
+  });
+
+  const eventLogs = (allData[SHEETS.eventLog] || []).slice(1);
+  eventLogs.forEach((row) => {
+    if (!row[0]) return;
+    events.push({
+      date: parseDate(row[0]),
+      time: parseTime(row[0]),
+      type: "event",
+      title: row[2] || "Event",
+      subtitle: row[1] || "Logged",
       details: row[3],
     });
   });

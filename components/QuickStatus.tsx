@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { SHEETS, formatTimestamp } from "@/lib/sheets";
 import { appendToSheet } from "@/lib/actions";
 import { Card } from "@/components/ui";
@@ -16,52 +15,52 @@ const quickStatuses = [
 ];
 
 export function QuickStatus() {
-  const router = useRouter();
   const [selected, setSelected] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState<string | null>(null);
   const [note, setNote] = useState("");
+  const [saving, setSaving] = useState<string | null>(null);
 
   const handleStatus = async (status: string) => {
     setSelected(status);
-    setSubmitting(status);
-    await appendToSheet(SHEETS.quickStatus, [formatTimestamp(), "", status, note]);
+    setSaving(status);
     setNote("");
-    router.refresh();
-    setTimeout(() => { setSubmitting(null); setSelected(null); }, 1500);
+    appendToSheet(SHEETS.quickStatus, [formatTimestamp(), "", status, note]).catch(() => {});
+    setTimeout(() => { setSaving(null); setSelected(null); }, 2000);
   };
 
   return (
     <Card className="p-5">
       <h3 className="text-lg font-extrabold text-[#164e63] dark:text-[#f8fafc] mb-1">Quick Status</h3>
-      <p className="text-sm text-[#64748b] dark:text-[#94a3b8] mb-4">Tap to log instantly</p>
+      <p className="text-sm text-[#64748b] dark:text-[#94a3b8] mb-4">Tap to log instantly — saves in background</p>
 
-      <div className="grid grid-cols-3 gap-2 mb-4">
+      <div className="grid grid-cols-3 gap-2 mb-3">
         {quickStatuses.map((s) => {
           const isActive = selected === s.label;
-          const isSubmitting = submitting === s.label;
+          const isSaving = saving === s.label;
           return (
             <button
               key={s.label}
               onClick={() => handleStatus(s.label)}
-              disabled={isSubmitting}
+              disabled={isSaving}
               className={`min-h-[56px] flex flex-col items-center justify-center gap-1 rounded-xl font-semibold text-sm transition-all ${s.color} ${
                 isActive ? "ring-2 ring-offset-2 ring-[#0891b2] dark:ring-offset-[#0c0a09] scale-105" : ""
-              } ${isSubmitting ? "opacity-70" : ""}`}
+              } ${isSaving ? "opacity-70" : ""}`}
             >
               <span className="text-xl leading-none">{s.emoji}</span>
-              <span className="text-[11px]">{isSubmitting ? "Saved!" : s.label}</span>
+              <span className="text-[11px]">{isSaving ? "Saved ✓" : s.label}</span>
             </button>
           );
         })}
       </div>
 
-      <input
-        type="text"
-        value={note}
-        onChange={(e) => setNote(e.target.value)}
-        placeholder="Add a note (optional)..."
-        className="w-full min-h-[48px] rounded-xl border-2 border-[#e2e8f0] dark:border-[#334155] bg-white dark:bg-[#1c1917] text-[#1e293b] dark:text-[#f8fafc] placeholder-[#94a3b8] px-4 text-sm"
-      />
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="Add a note (optional)..."
+          className="flex-1 min-h-[48px] rounded-xl border-2 border-[#e2e8f0] dark:border-[#334155] bg-white dark:bg-[#1c1917] text-[#1e293b] dark:text-[#f8fafc] placeholder-[#94a3b8] px-4 text-sm"
+        />
+      </div>
     </Card>
   );
 }
