@@ -78,29 +78,29 @@ export default async function HomePage() {
           </div>
           <div className="flex-1 min-w-0">
             <h2 className="text-xl font-extrabold leading-tight">Dad Tracker</h2>
-            <p className="text-white/70 text-sm font-medium">
+              <p className="text-white/90 text-sm font-medium">
               {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
             </p>
           </div>
           <Link href={`/day/${encodeURIComponent(getTodayKey())}`} className="flex-shrink-0">
             <div className="bg-white/20 hover:bg-white/30 rounded-2xl px-4 py-3 text-center transition-colors cursor-pointer">
               <p className="text-xl font-extrabold">{new Date().getDate()}</p>
-              <p className="text-[10px] text-white/70 font-semibold uppercase">Today</p>
+              <p className="text-[10px] text-white/90 font-bold uppercase">Today</p>
             </div>
           </Link>
         </div>
         <div className="grid grid-cols-3 gap-3">
           <div className="bg-white/10 rounded-2xl p-3 text-center">
             <p className="text-2xl font-extrabold">{totalEntries}</p>
-            <p className="text-[11px] text-white/70 font-semibold uppercase tracking-wider">Total Entries</p>
+            <p className="text-[11px] text-white/90 font-bold uppercase tracking-wider">Total Entries</p>
           </div>
           <div className="bg-white/10 rounded-2xl p-3 text-center">
             <p className="text-2xl font-extrabold">{events.length > 0 ? new Set(events.map(e => e.date)).size : 0}</p>
-            <p className="text-[11px] text-white/70 font-semibold uppercase tracking-wider">Active Days</p>
+            <p className="text-[11px] text-white/90 font-bold uppercase tracking-wider">Active Days</p>
           </div>
           <div className="bg-white/10 rounded-2xl p-3 text-center">
             <p className="text-2xl font-extrabold">{sections.length}</p>
-            <p className="text-[11px] text-white/70 font-semibold uppercase tracking-wider">Sections</p>
+            <p className="text-[11px] text-white/90 font-bold uppercase tracking-wider">Sections</p>
           </div>
         </div>
       </div>
